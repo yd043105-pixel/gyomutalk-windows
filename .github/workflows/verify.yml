@@ -1,0 +1,46 @@
+name: Windows verification
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: windows-latest
+    timeout-minutes: 35
+    env:
+      DOTNET_PROCESSOR_COUNT: '2'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+        with:
+          dotnet-version: 10.0.402
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24
+      - name: Build Windows messenger and verify client safeguards
+        shell: pwsh
+        run: |
+          dotnet build src/SchoolMessenger.Desktop -p:RestoreLockedMode=true --nologo -v quiet
+          if ($LASTEXITCODE -ne 0) { throw 'Windows build failed' }
+          foreach ($test in @('SchoolDirectoryChecks','DiscoveryChecks','IdleChecks')) {
+            dotnet run --project "tests/$test" -p:RestoreLockedMode=true
+            if ($LASTEXITCODE -ne 0) { throw "Verification failed: $test" }
+          }
+      - name: Build and test Windows user installer
+        shell: pwsh
+        run: |
+          ./scripts/Build-Installer.ps1
+          ./tests/installer.ps1
+          Copy-Item artifacts/yymessenger-1.0.0-setup-win-x64.exe artifacts/gyomutalk-windows-1.0.0-trial.exe
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: gyomutalk-windows-1.0.0-trial
+          path: |
+            artifacts/gyomutalk-windows-1.0.0-trial.exe
+            artifacts/SHA256SUMS.txt
+          retention-days: 7
+          if-no-files-found: error
