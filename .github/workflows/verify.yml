@@ -40,6 +40,22 @@ jobs:
             dotnet run --project "tests/$test" -p:RestoreLockedMode=true
             if ($LASTEXITCODE -ne 0) { throw "Verification failed: $test" }
           }
+      - name: Checkout pinned server fixture for native submission checks
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: yd043105-pixel/gyomutalk-server
+          ref: be4153b07d56a1d50404b8d0caef743cf24005a6
+          path: .test-services
+          persist-credentials: false
+      - name: Verify compact submission cards in the actual Windows app
+        shell: pwsh
+        env:
+          YY_TEST_SERVICE_ROOT: ${{ github.workspace }}/.test-services
+        run: |
+          dotnet build .test-services/src/SchoolMessenger.Server -p:RestoreLockedMode=true --nologo -v quiet
+          if ($LASTEXITCODE -ne 0) { throw 'Submission fixture build failed' }
+          node tests/submission-layout.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Native submission layout failed' }
       - name: Build and test Windows user installer
         shell: pwsh
         run: |
@@ -53,5 +69,8 @@ jobs:
           path: |
             artifacts/gyomutalk-windows-${{ env.APP_VERSION }}-trial.exe
             artifacts/SHA256SUMS.txt
+            artifacts/submission-layout/submission-layout-checks.json
+            artifacts/submission-layout/submissions-compact.png
+            artifacts/submission-layout/submissions-compact-narrow.png
           retention-days: 7
           if-no-files-found: error
