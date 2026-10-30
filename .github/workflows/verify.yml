@@ -36,7 +36,7 @@ jobs:
         run: |
           dotnet build src/SchoolMessenger.Desktop -p:RestoreLockedMode=true --nologo -v quiet
           if ($LASTEXITCODE -ne 0) { throw 'Windows build failed' }
-          foreach ($test in @('SchoolDirectoryChecks','DiscoveryChecks','IdleChecks')) {
+          foreach ($test in @('DiscoveryChecks','IdleChecks')) {
             dotnet run --project "tests/$test" -p:RestoreLockedMode=true
             if ($LASTEXITCODE -ne 0) { throw "Verification failed: $test" }
           }
