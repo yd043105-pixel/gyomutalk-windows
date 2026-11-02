@@ -12,3 +12,7 @@
 ## Desktop automatic updates
 
 WinSparkle 0.9.4 — MIT license and bundled third-party notices. Copies of COPYING files are shipped in licenses/WinSparkle. https://github.com/vslavik/winsparkle
+
+## School connection QR codes
+
+QRCoder 1.6.0 (administrator program) — MIT license. https://github.com/codebude/QRCoder
