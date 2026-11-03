@@ -46,7 +46,7 @@ try {
     Check 'silent per-user installation includes the self-contained executable, native libraries and Windows uninstall entry'
     $sentinel=Join-Path $installDirectory 'user-preserved.txt'; Set-Content -LiteralPath $sentinel -Value 'FAKE-USER-DATA-PRESERVE' -Encoding ASCII
     $sentinelHash=(Get-FileHash -LiteralPath $sentinel).Hash
-    $key=UninstallKey; $key.SetValue('DisplayVersion','0.9.0'); $key.Dispose()
+    $key=UninstallKey; $key.SetValue('DisplayVersion','0.0.0'); $key.Dispose()
     Install 'upgrade.log' -CreateIcons -Tasks 'desktopicon,autostart'
     $desktop=Join-Path ([Environment]::GetFolderPath('DesktopDirectory')) ($startupEntry+'.lnk')
     if(-not(Test-Path -LiteralPath $desktop)){throw 'Selected client desktop shortcut missing'}
