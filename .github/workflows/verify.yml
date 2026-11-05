@@ -44,7 +44,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: yd043105-pixel/gyomutalk-server
-          ref: be4153b07d56a1d50404b8d0caef743cf24005a6
+          ref: 3ade16bc701fa5d30fc80722e0406b026f953ca2
           path: .test-services
           persist-credentials: false
       - name: Verify compact submission cards in the actual Windows app
@@ -56,6 +56,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Submission fixture build failed' }
           node tests/submission-layout.mjs
           if ($LASTEXITCODE -ne 0) { throw 'Native submission layout failed' }
+          node tests/window-order.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Native work-window lifecycle failed' }
       - name: Build and test Windows user installer
         shell: pwsh
         run: |
