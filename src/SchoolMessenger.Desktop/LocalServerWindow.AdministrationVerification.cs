@@ -27,6 +27,15 @@ public sealed partial class LocalServerWindow
         check(administrationController is null&&HasText("교내 업무 관리자 로그인")&&!OwnedWindows.Cast<Window>().Any(w=>w.IsVisible),"member administration requires in-place authentication without opening the teacher messenger");capture("administrator-signin.png",this);
         check(await SignInAdministrator("office","http://127.0.0.1:5080","admin",password,viewRevision),"office administrator signs in directly in the administrator application");
         var source=adminSessions["office"];var login="synthetic"+Guid.NewGuid().ToString("N")[..8];var name="가상교사 가";
+        await OpenAdministration("timetable-feature","office");
+        var feature=ViewControls<CheckBox>(administrationView).Single(c=>c.Content?.ToString()=="교무톡 시간표 사용");
+        feature.IsChecked=false;await Click(Action("설정 저장"));await Wait(()=>HasText("시간표를 숨깁니다"),"시간표 설정이 저장되지 않았습니다.");
+        check(!(await source.Get<JsonElement>("api/timetable/status")).GetProperty("enabled").GetBoolean(),"the administrator switches off the school timetable from the native settings page");
+        feature.IsChecked=true;await Click(Action("설정 저장"));await Wait(()=>HasText("시간표가 표시됩니다"),"시간표를 다시 켜지 못했습니다.");
+        await OpenAdministration("attachment-limit","office");
+        var capacity=ViewControls<ComboBox>(administrationView).Single();capacity.SelectedItem=3;
+        await Click(Action("설정 저장"));await Wait(()=>HasText("3GiB로 저장했습니다"),"첨부 용량 설정이 저장되지 않았습니다.");
+        await source.RefreshAttachmentLimit();check(source.AttachmentLimit==3L*1024*1024*1024,"the native administrator can change the school attachment limit");
         var teacher=await source.Send<JsonElement>(HttpMethod.Post,"api/admin/users",new{username=login,name,department="가상 교무부",password,isAdmin=false,canBroadcast=false});
         await OpenAdministration("members","office");await Wait(()=>HasText(name),"구성원 목록이 로드되지 않았습니다.");
         check(administrationController is OfficeWindow&&!administrationController.IsVisible&&!OwnedWindows.Cast<Window>().Any(w=>w.IsVisible),"existing member settings load inside the single administrator window");capture("administrator-members.png",this);
@@ -39,6 +48,19 @@ public sealed partial class LocalServerWindow
         var saved=(await source.Get<JsonElement>("api/admin/users")).EnumerateArray().Single(u=>u.GetProperty("username").GetString()==login);
         var teacherId=saved.GetProperty("id").GetString();var duty=(await source.Get<JsonElement>("api/admin/office/permissions")).EnumerateArray().Single(p=>p.GetProperty("userId").GetString()==teacherId);
         check(saved.GetProperty("department").GetString()=="수정된 가상 부서"&&saved.GetProperty("position").GetString()=="가상부장"&&duty.GetProperty("calendarManager").GetBoolean()&&(await source.Get<JsonElement>("api/admin/timetable-managers")).EnumerateArray().Single(e=>e.GetProperty("id").GetString()==teacherId).GetProperty("enabled").GetBoolean(),"the member panel saves department, position and school duties, including the timetable, together through the authenticated API");
+        await Click(Action("조직도 폴더 관리"));await Wait(()=>HasText("학교 아래 두 단계"),"조직도 폴더 관리가 열리지 않았습니다.");
+        Input("폴더 이름").Text="가상 프로젝트";await Click(Action("폴더 추가"));
+        Input("폴더 이름").Text="가상 준비팀";await Click(Action("하위 폴더 추가"));
+        await Wait(()=>HasText("가상 준비팀 · 교직원"),"하위 폴더가 선택되지 않았습니다.");
+        check(!Action("하위 폴더 추가").IsEnabled,"the folder editor allows exactly two folder levels below the school");
+        ViewControls<CheckBox>(administrationView).Single(box=>box.Content?.ToString()?.StartsWith(name+" · ",StringComparison.Ordinal)==true).IsChecked=true;
+        await Click(Action("변경 저장"));await Wait(()=>HasText("조직도 폴더를 저장했습니다."),"조직도 저장에 실패했습니다.");
+        var folders=(await source.Get<SchoolMessenger.Contracts.RosterFolders>("api/admin/roster-folders")).Folders;
+        var rootFolder=folders.Single(folder=>folder.Name=="가상 프로젝트");
+        check(folders.Any(folder=>folder.Name=="가상 준비팀"&&folder.ParentId==rootFolder.Id&&folder.MemberIds.SequenceEqual([teacherId])),
+            "the administrator creates two nested folders and places a teacher in the selected folder");
+        capture("administrator-roster-folders.png",this);
+        await Click(Action("← 교직원 목록"));await Wait(()=>ViewControls<TextBox>(administrationView).Any(t=>System.Windows.Automation.AutomationProperties.GetName(t)=="교직원 검색"),"교직원 목록으로 돌아오지 못했습니다.");
         var search=ViewControls<TextBox>(administrationView).Single(t=>System.Windows.Automation.AutomationProperties.GetName(t)=="교직원 검색");search.Text="존재하지않는가상교사";UpdateLayout();check(HasText("일치하는 교직원이 없습니다.")&&!ViewControls<Button>(administrationView).Any(b=>System.Windows.Automation.AutomationProperties.GetName(b).EndsWith(" 계정 설정",StringComparison.Ordinal)),"member search filters the actual loaded directory and reports an empty result");
         await Click(ViewControls<Button>(administrationView).Single(b=>System.Windows.Automation.AutomationProperties.GetName(b)=="교직원 등록 · 승인"));await Wait(()=>HasText("새 교직원 등록")&&HasText("대기 중인 가입 신청이 없습니다."),"교직원 등록 · 승인 화면이 열리지 않았습니다.");
         check(!ViewControls<Button>(administrationView).Any(b=>b.Content?.ToString()=="특별실 목록"),"the registration page leaves navigation to the rail instead of repeating shortcut buttons");capture("administrator-registration.png",this);
