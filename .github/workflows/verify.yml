@@ -44,7 +44,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: yd043105-pixel/gyomutalk-server
-          ref: b4bf8200c1981c2643f92ac8a4edab587bd8f871
+          ref: bdc28a3920802a0ae7ee9694a66067334506bb7e
           path: .test-services
           persist-credentials: false
       - name: Verify compact submission cards in the actual Windows app
